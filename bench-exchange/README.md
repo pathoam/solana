@@ -36,20 +36,12 @@ matching trade orders.  All the transactions can execute concurrently.
   - A virtual asset that can be owned, traded, and holds virtual intrinsic value
     compared to other assets.  There are four types of tokens in this demo, A,
     B, C, D.  Each one may be traded for another.
-- Token account
-  - An account owned by the exchange that holds a quantity of one type of token.
+- exchange account
+  - An account maintained by the exchange that holds a quantity of one type of asset.
 - Account request
-  - A request to create a token account
+  - A request to create an exchange account
 - Token request
-  - A request to deposit tokens of a particular type into a token account.
-- Token pair
-  - A unique ordered list of two tokens.  For the four types of tokens used in
-    this demo, the valid pairs are AB, AC, AD, BC, BD, CD.
-- Direction of trade
-  - Describes which token in the pair the investor wants to sell and buy and can
-    be either "To" or "From".  For example, if an investor issues a "To" trade
-    for "AB" then they which to exchange A tokens to B tokens.  A "From" order
-    would read the other way,  A tokens from B tokens.
+  - A request to deposit tokens of a particular type into an exchange account.
 - Price ratio
   -  An expression of the relative prices of two tokens.  They consist of the
      price of the primary token and the price of the secondary token.  For
