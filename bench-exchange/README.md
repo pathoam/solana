@@ -36,7 +36,7 @@ matching trade orders.  All the transactions can execute concurrently.
   - A virtual asset that can be owned, traded, and holds virtual intrinsic value
     compared to other assets.  There are four types of tokens in this demo, A,
     B, C, D.  Each one may be traded for another.
-- exchange account
+- Exchange account
   - An account maintained by the exchange that holds a quantity of one type of asset.
 - Account request
   - A request to create an exchange account
@@ -51,19 +51,23 @@ matching trade orders.  All the transactions can execute concurrently.
      ratios are represented as fixed point numbers.  The fixed point scaler is
      defined in
      [exchange_state.rs](https://github.com/solana-labs/solana/blob/c2fdd1362a029dcf89c8907c562d2079d977df11/programs/exchange_api/src/exchange_state.rs#L7)
-- Trade request
-  - A Solana transaction executed by the exchange requesting the trade of one
-    type of token for another.  Trade requests are made up of the token pair,
-    the direction of the trade, quantity of the primary token, the price ratio,
-    and the two token accounts to be credited/deducted.  An example trade
-    request looks like "T AB 5 2" which reads "Exchange 5 A tokens to B tokens
-    at a price ratio of 1:2"  A fulfilled trade would result in 5 A tokens
-    deducted and 10 B tokens credited to the trade initiator's token accounts.
-    Successful trade requests result in a trade order.
-- Trade order
-  - The result of a successful trade request.  Trade orders are stored in
-    accounts owned by the submitter of the trade request.  They can only be
-    canceled by their owner but can be used by anyone in a trade swap.  They
+- Order Requests
+  - A Solana transaction sent by the owner of an exchange account and executed
+    by the exchange, resulting in the creation of an Order. It has these components:
+    - Offer - the contract address of an asset and an amount of the asset for sale by the maker
+    - Accept - the contract address of a asset and an amount of the asset accepted as compensation by the maker
+    - Expiration - a unix timestamp denoting the time of expiration of the order
+    - Execution options - optional parameters for trade clearing/settlement
+- Offer/Accept
+  - An AssetAmount (improve name) consists of an asset as identified by its contract address and an amount
+    of that asset in base units (lamports)
+  - The Offer and Accept fields should be populated by between 1 and n AssetAmounts
+    where n is a small number (10?)
+  - for efficient handling and execution, should be 1:1, 1:n, or n:1, not n:n
+- Orders
+  - The result of a successful order request.  Orders are stored in
+    accounts owned by the submitter of the order request.  They can only be
+    canceled by their owner but can be used by anyone in a match.  They
     contain the same information as the trade request.
 - Price spread
   - The difference between the two matching trade orders. The spread is the
@@ -470,6 +474,3 @@ To also see the cluster messages:
 ```bash
 $ RUST_LOG=solana_bench_exchange=info,solana=info cargo test --release -- --nocapture test_exchange_local_cluster
 ```
-
-
-
