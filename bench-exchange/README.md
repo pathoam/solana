@@ -1,4 +1,4 @@
-# token-exchange
+trades# token-exchange
 Solana Token Exchange Bench
 
 If you can't wait; jump to [Running the exchange](#Running-the-exchange) to
@@ -10,7 +10,7 @@ learn how to start and interact with the exchange.
 [Exchange startup](#Exchange-startup)<br>
 [Trade requests](#Trade-requests)<br>
 [Trade cancellations](#Trade-cancellations)<br>
-[Trade swap](#Trade-swap)<br>
+[Trades](#trade)<br>
 [Exchange program operations](#Exchange-program-operations)<br>
 [Quotes and OHLCV](#Quotes-and-OHLCV)<br>
 [Investor strategies](#Investor-strategies)<br>
@@ -140,7 +140,7 @@ open trade orders.-->
 Investors will initially query the exchange to discover their current balance
 for each type of token.  If the investor does not already have an account for
 each type of token, they will submit account requests.  Matchers as well will
-request accounts to hold the tokens they earn by initiating trade swaps.
+request accounts to hold the tokens they earn by initiating trades.
 
 ```rust
 /// Supported token types
@@ -196,17 +196,23 @@ pub enum ExchangeInstruction {
 ## Order requests
 
 When an investor decides to exchange a token of one type for another, they
-submit a transaction to the Solana Blockchain containing a trade request, which,
-if successful, is turned into a trade order.  Trade orders do not expire but are
-cancellable. <!-- Trade orders should have a timestamp to enable trade
-expiration -->  When a trade order is created, tokens are deducted from a token
-account and the trade order acts as an escrow.  The tokens are held until the
-trade order is fulfilled or canceled. If the direction is `To`, then the number
-of `tokens` are deducted from the primary account, if `From` then `tokens`
-multiplied by `price` are deducted from the secondary account.  Trade orders are
+submit a transaction to the Solana Blockchain containing an order request, which,
+if successfully validated, is turned into an order. Active orders can be cancelled
+by sending a cancel request to the exchange and have an optional expiration field,
+which takes a timestamp after which the order is considered invalid.
+When an order is created, tokens are deducted from a token account and the
+order acts as an escrow.  The tokens are held until the trade order is filled,
+canceled, or expired.
+
+In the event that the order is matched and fully executes, one or more AssetAmounts
+from the offer field will reflect the amount and identity of assets deducted from
+the primary account and credited to the secondary account. orders are
 no longer valid when the number of `tokens` goes to zero, at which point they
-can no longer be used. <!-- Could support refilling trade orders, so trade order
+can no longer be used.
+<!-- Could support refilling trade orders, so trade order
 accounts are refilled rather than accumulating -->
+
+
 
 ```rust
 /// Direction of the exchange between two tokens in a pair
@@ -279,35 +285,33 @@ pub enum ExchangeInstruction {
 }
 ```
 
-## Trade swaps
+## Trades
 
 The Matcher is monitoring the accounts assigned to the exchange program and
 building a trade-order table.  The trade order table is used to identify
 matching trade orders which could be fulfilled.  When a match is found the
-Matcher should issue a swap request.  Swap requests may not satisfy the entirety
+Matcher should issue a match request.  Match requests may not satisfy the entirety
 of either order, but the exchange will greedily fulfill it.  Any leftover tokens
-in either account will keep the trade order valid for further swap requests in
+in either account will keep the Order valid for further swap requests in
 the future.
 
 Matching trade orders are defined by the following swap requirements:
 
-- Opposite polarity (one `To` and one `From`)
-- Operate on the same token pair
-- The price ratio of the `From` order is greater than or equal to the `To` order
+- Opposite polarity offerA coincides with acceptB and acceptA with offerB
+- Operate on the same assets
 - There are sufficient tokens to perform the trade
 
 Orders can be written in the following format:
 
-`investor direction pair quantity price-ratio`
+`investor offerAsset offerAmount acceptAsset acceptAmount `
 
 For example:
 
-- `1 T AB 2 1`
+- `1 A 2 B 2`
   - Investor 1 wishes to exchange 2 A tokens to B tokens at a ratio of 1 A to 1
     B
-- `2 F AC 6 1.2`
-  - Investor 2 wishes to exchange A tokens from 6 B tokens at a ratio of 1 A
-    from 1.2 B
+- `2 A 5 B 6`
+  - Investor 2 wishes to exchange 5 A tokens for 6 B tokens at a ratio of 1A:1.2B
 
 An order table could look something like the following. Notice how the columns
 are sorted low to high and high to low, respectively.  Prices are dramatic and
@@ -388,7 +392,7 @@ no more swaps would be initiated until new orders came in.
 
 ```rust
 pub enum ExchangeInstruction {
-    /// Trade swap request
+    /// trade request
     /// key 0 - Signer
     /// key 1 - Account in which to record the swap
     /// key 2 - 'To' trade order
@@ -447,7 +451,7 @@ pub enum ExchangeInstruction {
     /// key 1 -Trade order to cancel
     TradeCancellation,
 
-    /// Trade swap request
+    /// trade request
     /// key 0 - Signer
     /// key 1 - Account in which to record the swap
     /// key 2 - 'To' trade order
