@@ -307,88 +307,45 @@ Orders can be written in the following format:
 
 For example:
 
-- `1 A 2 B 2`
-  - Investor 1 wishes to exchange 2 A tokens to B tokens at a ratio of 1 A to 1
+- `Ix A 2 B 2`
+  - Investor x wishes to exchange 2 A tokens to B tokens at a ratio of 1 A to 1
     B
-- `2 A 5 B 6`
-  - Investor 2 wishes to exchange 5 A tokens for 6 B tokens at a ratio of 1A:1.2B
+- `Iy A 5 B 6`
+  - Investor y wishes to exchange 5 A tokens for 6 B tokens at a ratio of 1A:1.2B
 
-An order table could look something like the following. Notice how the columns
-are sorted low to high and high to low, respectively.  Prices are dramatic and
-whole for clarity.
+A Matcher would likely maintain a table of outstanding valid orders for a given marketplace
+Take the market representation A/B the table would look something like this
 
-|Row| To          | From       |
-|---|-------------|------------|
-| 1 | 1 T AB 2 4  | 2 F AB 2 8 |
-| 2 | 1 T AB 1 4  | 2 F AB 2 8 |
-| 3 | 1 T AB 6 6  | 2 F AB 2 7 |
-| 4 | 1 T AB 2 8  | 2 F AB 3 6 |
-| 5 | 1 T AB 2 10 | 2 F AB 1 5 |
+  "Offer A / Accept B" (asks)       "Offer B / Accept A" (bids)
+|       Ix A 1 B 2            | 1 |         Iy B 3 A 1.25            |
+|       Im A 2 B 4.2          | 2 |         Iz B 5 A 3               |
+|       In A 1 B 3            | 3 |         It B 3 A 2               |
+|       Io A 4 B 15           | 4 |         Is B 2 A 2               |
 
-As part of a successful swap request, the exchange will credit tokens to the
-Matcher's account equal to the difference in the price ratios or the two orders.
-These tokens are considered the Matcher's profit for initiating the trade.
+In this example, the matcher has detected the above transactions and ordered them in
+two arrays by computed price ratio with the asks descending and bids ascending.
+Here, the first action by the matcher is to issue a match request using bid1 and ask1,
+resulting in a Trade being generated leading to the following balance adjustments:
 
-The Matcher would initiate the following swap on the order table above:
+           A      B
+Ix        -1      +2
+Iy        +1      -2.4
+Matcher    0      +0.4
 
-  - Row 1, To:   Investor 1 trades 2 A tokens to 8 B tokens
-  - Row 1, From: Investor 2 trades 2 A tokens from 8 B tokens
-  - Matcher takes 8 B tokens as profit
+This therefore results in the following revised order table, where the original ask1 has
+been completely filled and removed and bid1 has been updated to reflect its remaining
+funds.
 
-Both row 1 trades are fully realized, table becomes:
+"Offer A / Accept B" (asks)       "Offer B / Accept A" (bids)
+|       Im A 2 B 4.2        | 1 |         Iy B .6 A .25            |
+|       Ib A 1 B 3          | 2 |         Iz B 5 A 3               |
+|       Ic A 4 B 15         | 3 |         Ix B 3 A 2               |
+|                           | 4 |         Ix B 2 A 2               |
 
-|Row| To          | From       |
-|---|-------------|------------|
-| 1 | 1 T AB 1 4  | 2 F AB 2 8 |
-| 2 | 1 T AB 6 6  | 2 F AB 2 7 |
-| 3 | 1 T AB 2 8  | 2 F AB 3 6 |
-| 4 | 1 T AB 2 10 | 2 F AB 1 5 |
-
-The Matcher would initiate the following swap:
-
-  - Row 1, To:   Investor 1 trades 1 A token to 4 B tokens
-  - Row 1, From: Investor 2 trades 1 A token from 4 B tokens
-  - Matcher takes 4 B tokens as profit
-
-Row 1 From is not fully realized, table becomes:
-
-|Row| To          | From       |
-|---|-------------|------------|
-| 1 | 1 T AB 6 6  | 2 F AB 1 8 |
-| 2 | 1 T AB 2 8  | 2 F AB 2 7 |
-| 3 | 1 T AB 2 10 | 2 F AB 3 6 |
-| 4 |             | 2 F AB 1 5 |
-
-The Matcher would initiate the following swap:
-
-  - Row 1, To:   Investor 1 trades 1 A token to 6 B tokens
-  - Row 1, From: Investor 2 trades 1 A token from 6 B tokens
-  - Matcher takes 2 B tokens as profit
-
-Row 1 To is now fully realized, table becomes:
-
-|Row| To          | From       |
-|---|-------------|------------|
-| 1 | 1 T AB 5 6  | 2 F AB 2 7 |
-| 2 | 1 T AB 2 8  | 2 F AB 3 5 |
-| 3 | 1 T AB 2 10 | 2 F AB 1 5 |
-
-The Matcher would initiate the following last swap:
-
-  - Row 1, To:   Investor 1 trades 2 A token to 12 B tokens
-  - Row 1, From: Investor 2 trades 2 A token from 12 B tokens
-  - Matcher takes 4 B tokens as profit
-
-Table becomes:
-
-|Row| To          | From       |
-|---|-------------|------------|
-| 1 | 1 T AB 3 6  | 2 F AB 3 5 |
-| 2 | 1 T AB 2 8  | 2 F AB 1 5 |
-| 3 | 1 T AB 2 10 |            |
-
-At this point the lowest To's price is larger than the largest From's price so
-no more swaps would be initiated until new orders came in.
+Since the new ask1 and bid1 price ratios are .476 and .416 (ie. Investor m offers
+to sell A at a price of .476:1 and Investor y offers to buy A at .416:1 ), no new
+action will take place at this stage until such time as more potentially matchable
+orders are submitted.
 
 ```rust
 pub enum ExchangeInstruction {
