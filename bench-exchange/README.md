@@ -23,7 +23,7 @@ demo demonstrates one way to host an exchange on the Solana blockchain by
 emulating a currency exchange.
 
 The assets are virtual tokens held by investors who may post trade requests to
-the exchange.  A Swapper monitors the exchange and posts swap requests for
+the exchange.  A Matcher monitors the exchange and posts swap requests for
 matching trade orders.  All the transactions can execute concurrently.
 
 ## Premise
@@ -61,7 +61,7 @@ matching trade orders.  All the transactions can execute concurrently.
 - Offer/Accept
   - An AssetAmount (improve name) consists of an asset as identified by its contract address and an amount
     of that asset in base units (lamports)
-  - The Offer and Accept fields should be populated by between 1 and n AssetAmounts
+  - The Offer and Accept fields should be vectors populated by between 1 and n AssetAmounts
     where n is a small number (10?)
   - for efficient handling and execution, should be 1:1, 1:n, or n:1, not n:n
 - Orders
@@ -70,60 +70,76 @@ matching trade orders.  All the transactions can execute concurrently.
     canceled by their owner but can be used by anyone in a match.  They
     contain the same information as the trade request.
 - Price spread
-  - The difference between the two matching trade orders. The spread is the
-    profit of the Swapper initiating the swap request.
-- Swap requirements
-  - Policies that result in a successful trade swap.
-- Swap request
-  - A request to exchange tokens between to trade orders
-- Trade swap
-  - A successful trade.  A swap consists of two matching trade orders that meet
-    swap requirements.  A trade swap may not wholly satisfy one or both of the
-    trade orders in which case the trade orders are adjusted appropriately.  As
-    long as the swap requirements are met there will be an exchange of tokens
-    between accounts.  Any price spread is deposited into the Swapper's profit
-    account.  All trade swaps are recorded in a new account for posterity.
+  - The difference between the two matching orders. The spread is the
+    profit of the matcher initiating the swap request.
+- Execution Conditions
+  - Conditions which when met, result in a successful trade being carried out.
+    - Orders in question must complement each other in offer/accept assets
+    - Orders must be valid and active (not expired/cancelled
+- Match request
+  - A request submitted to the exchange to carry out the matching process
+  - Requires a set of valid, active orders that meet execution conditions
+- Match
+  - Initiated via the sending of a match request to the exchange, a basic match
+    requires two valid, complementary orders and if successful, results in a Trade being produced.
+  - Requested by a 3rd party matcher under normal circumstances, but may be carried out
+    by a direct stakeholder in the transaction
+  - Pays out a sum equal to the price spread of the orders times the volume
+    matched to the initiator of the Match Request
+- Trade
+  - A successful trade is carried out as a result of matching two valid orders that meet
+    execution conditions.  A trade may not wholly satisfy one or both of the
+    orders in which case the affected orders are adjusted appropriately.  As
+    long as the execution requirements are met there will be an exchange of tokens
+    between accounts. Trades are recorded in a new account for posterity.
 - Investor
   - Individual investors who hold a number of tokens and wish to trade them on
     the exchange.  Investors operate as Solana thin clients who own a set of
-    accounts containing tokens and/or trade requests.  Investors post
+    exchange accounts containing tokens and/or trade requests.  Investors make
     transactions to the exchange in order to request tokens and post or cancel
     trade requests.
-- Swapper
-  - An agent who facilitates trading between investors.  Swappers operate as
-    Solana thin clients who monitor all the trade orders looking for a trade
-    match.  Once found, the Swapper issues a swap request to the exchange.
-    Swappers are the engine of the exchange and are rewarded for their efforts by
-    accumulating the price spreads of the swaps they initiate.  Swappers also
-    provide current bid/ask price and OHLCV (Open, High, Low, Close, Volume)
-    information on demand via a public network port.
+- Matcher
+  - An agent who facilitates trading between investors.  Matchers operate as
+    Solana thin clients who monitor the pool of available orders looking for matchable
+    order pairs. Once found, the matcher issues a match request to the exchange.
+    Matchers are the engine of the exchange and are rewarded for their efforts by
+    accumulating the price spreads of the swaps they initiate.
 - Transaction fees
   - Solana transaction fees are paid for by the transaction submitters who are
-    the Investors and Swappers.
+    the Investors and Matchers.
+- Market Validator
+  - Solana network validators which have elected to compute and track market
+    state and publish event feeds and other data with public API's.
+    <!-- There needs to be some kind of incentive to drive this behavior in the long term,
+    so setting it up as a marketplace for data where suppliers compete in a largely
+    fungible product with a low barrier to entry seems like a good way to align
+    incentives toward stable, honest actors.  -->
 
 ## Exchange startup
 
 The exchange is up and running when it reaches a state where it can take
-investor's trades and Swapper's swap requests.  To achieve this state the
+investor's trades and Matcher's swap requests.  To achieve this state the
 following must occur in order:
 
 - Start the Solana blockchain
-- Start the Swapper thin-client
-- The Swapper subscribes to change notifications for all the accounts owned by
+- Start the Matcher thin-client
+- The Matcher subscribes to change notifications for all the accounts owned by
   the exchange program id.  The subscription is managed via Solana's JSON RPC
   interface.
-- The Swapper starts responding to queries for bid/ask price and OHLCV
+- Matchers, investors, and administrators of exchange frontends query Market Validator
+  API for market state and event feeds and refer to replicators for historic data
 
-The Swapper responding successfully to price and OHLCV requests is the signal to
+
+The Matcher responding successfully to price and OHLCV requests is the signal to
 the investors that trades submitted after that point will be analyzed.  <!--This
 is not ideal, and instead investors should be able to submit trades at any time,
-and the Swapper could come and go without missing a trade.  One way to achieve
-this is for the Swapper to read the current state of all accounts looking for all
+and the Matcher could come and go without missing a trade.  One way to achieve
+this is for the Matcher to read the current state of all accounts looking for all
 open trade orders.-->
 
 Investors will initially query the exchange to discover their current balance
 for each type of token.  If the investor does not already have an account for
-each type of token, they will submit account requests.  Swappers as well will
+each type of token, they will submit account requests.  Matchers as well will
 request accounts to hold the tokens they earn by initiating trade swaps.
 
 ```rust
@@ -161,7 +177,7 @@ pub struct TokenAccountInfo {
 }
 ```
 
-For this demo investors or Swappers can request more tokens from the exchange at
+For this demo investors or Matchers can request more tokens from the exchange at
 any time by submitting token requests. In non-demos, an exchange of this type
 would provide another way to exchange a 3rd party asset into tokens.
 
@@ -177,7 +193,7 @@ pub enum ExchangeInstruction {
 }
 ```
 
-## Trade requests
+## Order requests
 
 When an investor decides to exchange a token of one type for another, they
 submit a transaction to the Solana Blockchain containing a trade request, which,
@@ -265,10 +281,10 @@ pub enum ExchangeInstruction {
 
 ## Trade swaps
 
-The Swapper is monitoring the accounts assigned to the exchange program and
+The Matcher is monitoring the accounts assigned to the exchange program and
 building a trade-order table.  The trade order table is used to identify
 matching trade orders which could be fulfilled.  When a match is found the
-Swapper should issue a swap request.  Swap requests may not satisfy the entirety
+Matcher should issue a swap request.  Swap requests may not satisfy the entirety
 of either order, but the exchange will greedily fulfill it.  Any leftover tokens
 in either account will keep the trade order valid for further swap requests in
 the future.
@@ -306,14 +322,14 @@ whole for clarity.
 | 5 | 1 T AB 2 10 | 2 F AB 1 5 |
 
 As part of a successful swap request, the exchange will credit tokens to the
-Swapper's account equal to the difference in the price ratios or the two orders.
-These tokens are considered the Swapper's profit for initiating the trade.
+Matcher's account equal to the difference in the price ratios or the two orders.
+These tokens are considered the Matcher's profit for initiating the trade.
 
-The Swapper would initiate the following swap on the order table above:
+The Matcher would initiate the following swap on the order table above:
 
   - Row 1, To:   Investor 1 trades 2 A tokens to 8 B tokens
   - Row 1, From: Investor 2 trades 2 A tokens from 8 B tokens
-  - Swapper takes 8 B tokens as profit
+  - Matcher takes 8 B tokens as profit
 
 Both row 1 trades are fully realized, table becomes:
 
@@ -324,11 +340,11 @@ Both row 1 trades are fully realized, table becomes:
 | 3 | 1 T AB 2 8  | 2 F AB 3 6 |
 | 4 | 1 T AB 2 10 | 2 F AB 1 5 |
 
-The Swapper would initiate the following swap:
+The Matcher would initiate the following swap:
 
   - Row 1, To:   Investor 1 trades 1 A token to 4 B tokens
   - Row 1, From: Investor 2 trades 1 A token from 4 B tokens
-  - Swapper takes 4 B tokens as profit
+  - Matcher takes 4 B tokens as profit
 
 Row 1 From is not fully realized, table becomes:
 
@@ -339,11 +355,11 @@ Row 1 From is not fully realized, table becomes:
 | 3 | 1 T AB 2 10 | 2 F AB 3 6 |
 | 4 |             | 2 F AB 1 5 |
 
-The Swapper would initiate the following swap:
+The Matcher would initiate the following swap:
 
   - Row 1, To:   Investor 1 trades 1 A token to 6 B tokens
   - Row 1, From: Investor 2 trades 1 A token from 6 B tokens
-  - Swapper takes 2 B tokens as profit
+  - Matcher takes 2 B tokens as profit
 
 Row 1 To is now fully realized, table becomes:
 
@@ -353,11 +369,11 @@ Row 1 To is now fully realized, table becomes:
 | 2 | 1 T AB 2 8  | 2 F AB 3 5 |
 | 3 | 1 T AB 2 10 | 2 F AB 1 5 |
 
-The Swapper would initiate the following last swap:
+The Matcher would initiate the following last swap:
 
   - Row 1, To:   Investor 1 trades 2 A token to 12 B tokens
   - Row 1, From: Investor 2 trades 2 A token from 12 B tokens
-  - Swapper takes 4 B tokens as profit
+  - Matcher takes 4 B tokens as profit
 
 Table becomes:
 
@@ -379,7 +395,7 @@ pub enum ExchangeInstruction {
     /// key 3 - `From` trade order
     /// key 4 - Token account associated with the To Trade
     /// key 5 - Token account associated with From trade
-    /// key 6 - Token account in which to deposit the Swappers profit from the swap.
+    /// key 6 - Token account in which to deposit the Matchers profit from the swap.
     SwapRequest,
 }
 
@@ -438,14 +454,14 @@ pub enum ExchangeInstruction {
     /// key 3 - `From` trade order
     /// key 4 - Token account associated with the To Trade
     /// key 5 - Token account associated with From trade
-    /// key 6 - Token account in which to deposit the Swappers profit from the swap.
+    /// key 6 - Token account in which to deposit the Matchers profit from the swap.
     SwapRequest,
 }
 ```
 
 ## Quotes and OHLCV
 
-The Swapper will provide current bid/ask price quotes based on trade actively and
+The Matcher will provide current bid/ask price quotes based on trade actively and
 also provide OHLCV based on some time window.  The details of how the bid/ask
 price quotes are calculated are yet to be decided.
 
