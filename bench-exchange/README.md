@@ -76,6 +76,7 @@ matching trade orders.  All the transactions can execute concurrently.
   - Conditions which when met, result in a successful trade being carried out.
     - Orders in question must complement each other in offer/accept assets
     - Orders must be valid and active (not expired/cancelled
+
 - Match request
   - A request submitted to the exchange to carry out the matching process
   - Requires a set of valid, active orders that meet execution conditions
@@ -219,7 +220,13 @@ pub enum SettlementType {
     Partial,  // Settle a fraction of the order to underlying asset (not mvp feature)
 }
 
-/// holds options for order execution and validity testing
+pub enum OrderType { // not mvp feature
+    Limit,
+    Market,
+    Stop,
+}
+
+/// holds options for order execution and handling
 pub struct OrderOptions {
     // settlement account is the account on the other chain to settle to (if crosschain order)
     pub SettlementAccount: Option<Pubkey>,
@@ -232,10 +239,11 @@ pub struct OrderOptions {
 }
 
 pub struct OrderRequestInfo {
-    /// Token pair to trade
+
+    /// Asset(s) to offer in the trade
     pub Offer: Vec<AssetAmount>,
 
-    /// Number of tokens to exchange; refers to the primary or the secondary depending on the direction
+    // Asset(s) accepted as payment
     pub Accept: Vec<AssetAmount>,
 
     /// Order parameters and execution options
@@ -254,23 +262,19 @@ pub enum ExchangeInstruction {
 }
 
 /// Trade accounts are populated with this structure
-pub struct TradeOrderInfo {
+pub struct OrderInfo {
     /// Owner of the trade order
     pub owner: Pubkey,
-    /// Direction of the exchange
-    pub direction: Direction,
-    /// Token pair indicating two tokens to exchange, first is primary
-    pub pair: TokenPair,
-    /// Number of tokens to exchange; primary or secondary depending on direction
-    pub tokens: u64,
-    /// Scaled price of the secondary token given the primary is equal to the scale value
-    /// If scale is 1 and price is 2 then ratio is 1:2 or 1 primary token for 2 secondary tokens
-    pub price: u64,
+
+    pub Offer: Vec<AssetAmount>,
+
+    pub Accept: Vec<AssetAmount>,
+
     /// account which the tokens were source from.  The trade account holds the tokens in escrow
     /// until either one or more part of a swap or the trade is canceled.
-    pub src_account: Pubkey,
+    pub SourceAccount: Pubkey,
     /// account which the tokens the tokens will be deposited into on a successful trade
-    pub dst_account: Pubkey,
+    pub DepositAccount: Pubkey,
 }
 ```
 
@@ -296,7 +300,7 @@ building a trade-order table.  The trade order table is used to identify
 matching trade orders which could be fulfilled.  When a match is found the
 Matcher should issue a match request.  Match requests may not satisfy the entirety
 of either order, but the exchange will greedily fulfill it.  Any leftover tokens
-in either account will keep the Order valid for further swap requests in
+in either account will keep the Order valid for further matches in
 the future.
 
 Matching trade orders are defined by the following swap requirements:
@@ -362,25 +366,23 @@ pub enum ExchangeInstruction {
     /// key 4 - Token account associated with the To Trade
     /// key 5 - Token account associated with From trade
     /// key 6 - Token account in which to deposit the Matchers profit from the swap.
-    SwapRequest,
+    MatchRequest,
 }
 
-/// Swap accounts are populated with this structure
-pub struct TradeSwapInfo {
-    /// Pair swapped
-    pub pair: TokenPair,
-    /// `To` trade order
-    pub to_trade_order: Pubkey,
-    /// `From` trade order
-    pub from_trade_order: Pubkey,
-    /// Number of primary tokens exchanged
-    pub primary_tokens: u64,
-    /// Price the primary tokens were exchanged for
-    pub primary_price: u64,
-    /// Number of secondary tokens exchanged
-    pub secondary_tokens: u64,
-    /// Price the secondary tokens were exchanged for
-    pub secondary_price: u64,
+/// Trade accounts are populated with this structure
+pub struct TradeInfo {
+    pub Offered: Vec<AssetAmount>,
+    /// Assets offered for trade
+    pub Accepted: Vec<AssetAmount>,
+    /// Assets accepted for trades
+    /// Offer/Accept for trade have arbitrary "polarity" eg. swapping them in the trade context should have no effect on logic.
+    // Might be better to name them in a way that doesn't imply temporal relationship
+
+    pub OfferedOrder: Pubkey,
+    /// order that supplied the assets referred in the Offered field
+    pub AcceptedOrder: Pubkey,
+    /// order that supplied the assets referred in the Accepted field
+    pub Timestamp: u32,
 }
 ```
 
@@ -406,22 +408,22 @@ pub enum ExchangeInstruction {
     /// key 0 - Signer
     /// key 1 - Account in which to record the swap
     /// key 2 - Token account associated with this trade
-    TradeRequest(TradeRequestInfo),
+    OrderRequest(OrderRequestInfo),
 
-    /// Trade cancellation
+    /// Order cancellation
     /// key 0 - Signer
-    /// key 1 -Trade order to cancel
-    TradeCancellation,
+    /// key 1 - Order to cancel
+    OrderCancellation,
 
     /// trade request
     /// key 0 - Signer
     /// key 1 - Account in which to record the swap
-    /// key 2 - 'To' trade order
-    /// key 3 - `From` trade order
-    /// key 4 - Token account associated with the To Trade
-    /// key 5 - Token account associated with From trade
-    /// key 6 - Token account in which to deposit the Matchers profit from the swap.
-    SwapRequest,
+    /// key 2 - 'Offered' order
+    /// key 3 - 'Accepted' order
+    /// key 4 - Token account associated with the 'Offered' order
+    /// key 5 - Token account associated with the 'Accepted' order
+    /// key 6 - Token account in which to deposit the Matcher's profit from the match.
+    MatchRequest,
 }
 ```
 
