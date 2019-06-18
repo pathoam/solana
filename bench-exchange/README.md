@@ -151,16 +151,6 @@ pub enum Token {
     D,
 }
 
-/// Supported token pairs
-pub enum TokenPair {
-    AB,
-    AC,
-    AD,
-    BC,
-    BD,
-    CD,
-}
-
 pub enum ExchangeInstruction {
     /// New token account
     /// key 0 - Signer
@@ -224,28 +214,35 @@ pub struct AssetAmount { /// needs better name (AssetPool, AssetInfo ?)
 }
 
 pub enum SettlementType {
-
+    Auto,     // Automatically settle entire order to underlying asset
+    Deferred, // Transfer tokens but don't begin settlement process
+    Partial,  // Settle a fraction of the order to underlying asset (not mvp feature)
 }
-
 
 /// holds options for order execution and validity testing
 pub struct OrderOptions {
+    // settlement account is the account on the other chain to settle to (if crosschain order)
+    pub SettlementAccount: Option<Pubkey>,
 
-    pub SettlementType:
+    // style of settlement behavior
+    pub SettlementType: Option<SettlementType>,
+
+    // Time after which order is no longer valid
+    pub ExpirationTs: Option<u32>,
 }
 
 pub struct OrderRequestInfo {
     /// Token pair to trade
-    pub offer: Vec<AssetAmount>,
+    pub Offer: Vec<AssetAmount>,
 
     /// Number of tokens to exchange; refers to the primary or the secondary depending on the direction
-    pub accept: Vec<AssetAmount>,
+    pub Accept: Vec<AssetAmount>,
 
     /// Order parameters and execution options
-    pub options: OrderOptions,
+    pub Options: OrderOptions,
 
-    /// Token account to deposit tokens on successful trade
-    pub depositAccount: Pubkey,
+    /// Solana account to deposit assets on successful trade
+    pub DepositAccount: Pubkey,
 }
 
 pub enum ExchangeInstruction {
