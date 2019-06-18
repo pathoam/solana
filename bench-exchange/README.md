@@ -215,30 +215,37 @@ accounts are refilled rather than accumulating -->
 
 
 ```rust
-/// Direction of the exchange between two tokens in a pair
-pub enum Direction {
-    /// Trade first token type (primary) in the pair 'To' the second
-    To,
-    /// Trade first token type in the pair 'From' the second (secondary)
-    From,
+/// holds asset/amount pairs
+pub struct AssetAmount { /// needs better name (AssetPool, AssetInfo ?)
+    /// Asset in question, as identified by contract address
+    pub Asset: Pubkey,
+    /// Amount of the Asset in question in base units
+    pub Amount: u64,
 }
 
-pub struct TradeRequestInfo {
-    /// Direction of trade
-    pub direction: Direction,
+pub enum SettlementType {
 
+}
+
+
+/// holds options for order execution and validity testing
+pub struct OrderOptions {
+
+    pub SettlementType:
+}
+
+pub struct OrderRequestInfo {
     /// Token pair to trade
-    pub pair: TokenPair,
+    pub offer: Vec<AssetAmount>,
 
     /// Number of tokens to exchange; refers to the primary or the secondary depending on the direction
-    pub tokens: u64,
+    pub accept: Vec<AssetAmount>,
 
-    /// The price ratio the primary price over the secondary price.  The primary price is fixed
-    /// and equal to the variable `SCALER`.
-    pub price: u64,
+    /// Order parameters and execution options
+    pub options: OrderOptions,
 
-    /// Token account to deposit tokens on successful swap
-    pub dst_account: Pubkey,
+    /// Token account to deposit tokens on successful trade
+    pub depositAccount: Pubkey,
 }
 
 pub enum ExchangeInstruction {
@@ -347,11 +354,12 @@ to sell A at a price of .476:1 and Investor y offers to buy A at .416:1 ), no ne
 action will take place at this stage until such time as more potentially matchable
 orders are submitted.
 
+
 ```rust
 pub enum ExchangeInstruction {
     /// trade request
     /// key 0 - Signer
-    /// key 1 - Account in which to record the swap
+    /// key 1 - Account in which to record the trade
     /// key 2 - 'To' trade order
     /// key 3 - `From` trade order
     /// key 4 - Token account associated with the To Trade
