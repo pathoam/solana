@@ -9,7 +9,7 @@ learn how to start and interact with the exchange.
 [Premiss](#Premiss)<br>
 [Exchange startup](#Exchange-startup)<br>
 [Trade requests](#Trade-requests)<br>
-[Trade cancellations](#Trade-cancellations)<br>
+[Order cancellations](#Order-cancellations)<br>
 [Trades](#trade)<br>
 [Exchange program operations](#Exchange-program-operations)<br>
 [Quotes and OHLCV](#Quotes-and-OHLCV)<br>
@@ -278,7 +278,7 @@ pub struct OrderInfo {
 }
 ```
 
-## Trade cancellations
+## Order cancellations
 
 An investor may cancel a trade at anytime, but only trades they own.  If the
 cancellation is successful, any tokens held in escrow are returned to the
@@ -286,10 +286,10 @@ account from which they came.
 
 ```rust
 pub enum ExchangeInstruction {
-    /// Trade cancellation
+    /// Order cancellation
     /// key 0 - Signer
     /// key 1 -Trade order to cancel
-    TradeCancellation,
+    OrderCancellation,
 }
 ```
 
