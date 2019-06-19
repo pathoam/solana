@@ -57,13 +57,18 @@ matching trade orders.  All the transactions can execute concurrently.
     - Offer - the contract address of an asset and an amount of the asset for sale by the maker
     - Accept - the contract address of a asset and an amount of the asset accepted as compensation by the maker
     - Expiration - a unix timestamp denoting the time of expiration of the order
-    - Execution options - optional parameters for trade clearing/settlement
+    - OrderOptions - optional parameters for trade execution/settlement behavior
 - Offer/Accept
+  - Are used to specify the terms of an Order. The order issuer elects to offer
+    certain assetAmounts and to accept as others as payment
   - An AssetAmount (improve name) consists of an asset as identified by its contract address and an amount
-    of that asset in base units (lamports)
+    of that asset in base units
   - The Offer and Accept fields should be vectors populated by between 1 and n AssetAmounts
-    where n is a small number (10?)
-  - for efficient handling and execution, should be 1:1, 1:n, or n:1, not n:n
+    where n is a small number (3-5).
+  - for efficient handling and execution, should be limited to 1:1, 1:n, or n:1, not n:n
+  - The point of these multi-asset orders is to improve the marginal utility of capital
+    for traders in a way that is intrinsic to the exchange and does not require rebates
+    or grant programs to incentivize market makers. They are not an MVP feature.
 - Orders
   - The result of a successful order request.  Orders are stored in
     accounts owned by the submitter of the order request.  They can only be
@@ -74,9 +79,9 @@ matching trade orders.  All the transactions can execute concurrently.
     profit of the matcher initiating the swap request.
 - Execution Conditions
   - Conditions which when met, result in a successful trade being carried out.
-    - Orders in question must complement each other in offer/accept assets
-    - Orders must be valid and active (not expired/cancelled
-
+    - Orders in question must complement each other in offer/accept asset directionality
+    - Orders must be valid and active (not expired/cancelled)
+    - Orders must be issued by different accounts (self-trade prevention)
 - Match request
   - A request submitted to the exchange to carry out the matching process
   - Requires a set of valid, active orders that meet execution conditions
@@ -95,13 +100,13 @@ matching trade orders.  All the transactions can execute concurrently.
     between accounts. Trades are recorded in a new account for posterity.
 - Investor
   - Individual investors who hold a number of tokens and wish to trade them on
-    the exchange.  Investors operate as Solana thin clients who own a set of
+    the exchange.  Investors operate as Solana clients who own a set of
     exchange accounts containing tokens and/or trade requests.  Investors make
     transactions to the exchange in order to request tokens and post or cancel
     trade requests.
 - Matcher
   - An agent who facilitates trading between investors.  Matchers operate as
-    Solana thin clients who monitor the pool of available orders looking for matchable
+    Solana clients who monitor the pool of available orders looking for matchable
     order pairs. Once found, the matcher issues a match request to the exchange.
     Matchers are the engine of the exchange and are rewarded for their efforts by
     accumulating the price spreads of the swaps they initiate.
@@ -228,7 +233,7 @@ pub enum OrderType { // not mvp feature
 
 /// holds options for order execution and handling
 pub struct OrderOptions {
-    // settlement account is the account on the other chain to settle to (if crosschain order)
+    // settlement account is the account to settle to (if compound transaction)
     pub SettlementAccount: Option<Pubkey>,
 
     // style of settlement behavior
