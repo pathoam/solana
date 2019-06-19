@@ -8,7 +8,7 @@ learn how to start and interact with the exchange.
 [Overview](#Overview)<br>
 [Premiss](#Premiss)<br>
 [Exchange startup](#Exchange-startup)<br>
-[Trade requests](#Trade-requests)<br>
+[Order requests](#Order-requests)<br>
 [Order cancellations](#Order-cancellations)<br>
 [Trades](#trade)<br>
 [Exchange program operations](#Exchange-program-operations)<br>
@@ -22,8 +22,8 @@ An exchange is a marketplace where one asset can be traded for another.  This
 demo demonstrates one way to host an exchange on the Solana blockchain by
 emulating a currency exchange.
 
-The assets are virtual tokens held by investors who may post trade requests to
-the exchange.  A Matcher monitors the exchange and posts swap requests for
+The assets are virtual tokens held by investors who may post order requests to
+the exchange.  A Matcher monitors the exchange and issues match requests for
 matching trade orders.  All the transactions can execute concurrently.
 
 ## Premise
@@ -73,7 +73,7 @@ matching trade orders.  All the transactions can execute concurrently.
   - The result of a successful order request.  Orders are stored in
     accounts owned by the submitter of the order request.  They can only be
     canceled by their owner but can be used by anyone in a match.  They
-    contain the same information as the trade request.
+    contain the same information as the order request.
 - Price spread
   - The difference between the two matching orders. The spread is the
     profit of the matcher initiating the swap request.
@@ -101,9 +101,9 @@ matching trade orders.  All the transactions can execute concurrently.
 - Investor
   - Individual investors who hold a number of tokens and wish to trade them on
     the exchange.  Investors operate as Solana clients who own a set of
-    exchange accounts containing tokens and/or trade requests.  Investors make
-    transactions to the exchange in order to request tokens and post or cancel
-    trade requests.
+    exchange accounts containing tokens and/or orders.  Investors make
+    transactions to the exchange in order to request tokens and instantiate or cancel
+    orders.
 - Matcher
   - An agent who facilitates trading between investors.  Matchers operate as
     Solana clients who monitor the pool of available orders looking for matchable
@@ -225,7 +225,8 @@ pub enum SettlementType {
     Partial,  // Settle a fraction of the order to underlying asset (not mvp feature)
 }
 
-pub enum OrderType { // not mvp feature
+<!-- not mvp feature -->
+pub enum OrderType {
     Limit,
     Market,
     Stop,
@@ -259,11 +260,11 @@ pub struct OrderRequestInfo {
 }
 
 pub enum ExchangeInstruction {
-    /// Trade request
+    /// Order request
     /// key 0 - Signer
-    /// key 1 - Account in which to record the swap
-    /// key 2 - Token account associated with this trade
-    TradeRequest(TradeRequestInfo),
+    /// key 1 - Account in which to record the trade
+    /// key 2 - Exchange account associated with this order
+    OrderRequest(OrderRequestInfo),
 }
 
 /// Trade accounts are populated with this structure
@@ -293,7 +294,7 @@ account from which they came.
 pub enum ExchangeInstruction {
     /// Order cancellation
     /// key 0 - Signer
-    /// key 1 -Trade order to cancel
+    /// key 1 - Order to cancel
     OrderCancellation,
 }
 ```
@@ -363,13 +364,13 @@ orders are submitted.
 
 ```rust
 pub enum ExchangeInstruction {
-    /// trade request
+    /// match request
     /// key 0 - Signer
     /// key 1 - Account in which to record the trade
-    /// key 2 - 'To' trade order
-    /// key 3 - `From` trade order
-    /// key 4 - Token account associated with the To Trade
-    /// key 5 - Token account associated with From trade
+    /// key 2 - Order A (Order polarity makes no difference to execution)
+    /// key 3 - Order B
+    /// key 4 - Token account associated with the A Order
+    /// key 5 - Token account associated with the B Order
     /// key 6 - Token account in which to deposit the Matchers profit from the swap.
     MatchRequest,
 }
@@ -409,10 +410,10 @@ pub enum ExchangeInstruction {
     ///         the exchange has a limitless number of tokens it can transfer.
     TransferRequest(Token, u64),
 
-    /// Trade request
+    /// Order request
     /// key 0 - Signer
     /// key 1 - Account in which to record the swap
-    /// key 2 - Token account associated with this trade
+    /// key 2 - Token account associated with this order
     OrderRequest(OrderRequestInfo),
 
     /// Order cancellation
@@ -420,13 +421,13 @@ pub enum ExchangeInstruction {
     /// key 1 - Order to cancel
     OrderCancellation,
 
-    /// trade request
+    /// match request
     /// key 0 - Signer
     /// key 1 - Account in which to record the swap
-    /// key 2 - 'Offered' order
-    /// key 3 - 'Accepted' order
-    /// key 4 - Token account associated with the 'Offered' order
-    /// key 5 - Token account associated with the 'Accepted' order
+    /// key 2 - A order
+    /// key 3 - B order
+    /// key 4 - Token account associated with the A order
+    /// key 5 - Token account associated with the B order
     /// key 6 - Token account in which to deposit the Matcher's profit from the match.
     MatchRequest,
 }
