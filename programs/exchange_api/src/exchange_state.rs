@@ -75,34 +75,25 @@ impl std::ops::IndexMut<Token> for Tokens {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[allow(non_snake_case)]
-pub enum TokenPair {
-    AB,
-    AC,
-    AD,
-    BC,
-    BD,
-    CD,
+pub struct AssetAmount {
+    /// Asset contract pubkey
+    pub asset: Pubkey,
+    /// Amount of said asset in base units
+    pub amount: u64,
 }
-impl Default for TokenPair {
-    fn default() -> Self {
-        TokenPair::AB
+
+impl AssetAmount {
+    pub fn amount(mut self, amount:u64) -> Self {
+        self.amount = amount;
+        self
     }
-}
-impl TokenPair {
-    pub fn primary(self) -> Token {
-        match self {
-            TokenPair::AB | TokenPair::AC | TokenPair::AD => Token::A,
-            TokenPair::BC | TokenPair::BD => Token::B,
-            TokenPair::CD => Token::C,
-        }
-    }
-    pub fn secondary(self) -> Token {
-        match self {
-            TokenPair::AB => Token::B,
-            TokenPair::AC | TokenPair::BC => Token::C,
-            TokenPair::AD | TokenPair::BD | TokenPair::CD => Token::D,
-        }
+
+    pub fn scaleRemaining(mut self, scalar:f64) -> Self {
+        assert!(scalar < 1.0);
+        let amt = self.amount as f64;
+        amt     = (amt * scalar) as u64;
+        self.amount = amt
+        self
     }
 }
 
@@ -114,6 +105,7 @@ pub struct TokenAccountInfo {
     /// Current number of tokens this account holds
     pub tokens: Tokens,
 }
+
 impl TokenAccountInfo {
     pub fn owner(mut self, owner: &Pubkey) -> Self {
         self.owner = *owner;
