@@ -61,8 +61,8 @@ matching trade orders.  All the transactions can execute concurrently.
 - Offer/Accept
   - Are used to specify the terms of an Order. The order issuer elects to offer
     certain assetAmounts and to accept as others as payment
-  - An AssetAmount (improve name) consists of an asset as identified by its contract address and an amount
-    of that asset in base units
+  - An AssetAmount (improve name) consists of an asset as identified by its contract
+    address and an amount of that asset in base units.
   - The Offer and Accept fields should be vectors populated by between 1 and n AssetAmounts
     where n is a small number (3-5).
   - for efficient handling and execution, should be limited to 1:1, 1:n, or n:1, not n:n
@@ -74,6 +74,9 @@ matching trade orders.  All the transactions can execute concurrently.
     accounts owned by the submitter of the order request.  They can only be
     canceled by their owner but can be used by anyone in a match.  They
     contain the same information as the order request.
+  - Multi-asset Orders are orders which have more than one asset amount in either
+    the offer or accept field
+
 - Price spread
   - The difference between the two matching orders. The spread is the
     profit of the matcher initiating the swap request.
