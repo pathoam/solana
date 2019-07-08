@@ -7,7 +7,7 @@ use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::pubkey::Pubkey;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-pub struct TradeRequestInfo {
+pub struct OrderRequestInfo {
     /// Direction of trade
     pub direction: Direction,
 
@@ -39,7 +39,7 @@ pub enum ExchangeInstruction {
     /// key 0 - Signer
     /// key 1 - Account in which to record the trade order
     /// key 2 - Token account to source tokens from
-    TradeRequest(TradeRequestInfo),
+    TradeRequest(OrderRequestInfo),
 
     /// Trade cancellation
     /// key 0 - Signer
@@ -97,7 +97,7 @@ pub fn trade_request(
     ];
     Instruction::new(
         id(),
-        &ExchangeInstruction::TradeRequest(TradeRequestInfo {
+        &ExchangeInstruction::TradeRequest(OrderRequestInfo {
             direction,
             pair,
             tokens,

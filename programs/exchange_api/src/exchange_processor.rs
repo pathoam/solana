@@ -261,7 +261,7 @@ impl ExchangeProcessor {
 
     fn do_trade_request(
         keyed_accounts: &mut [KeyedAccount],
-        info: &TradeRequestInfo,
+        info: &OrderRequestInfo,
     ) -> Result<(), InstructionError> {
         const OWNER_INDEX: usize = 0;
         const TRADE_INDEX: usize = 1;
