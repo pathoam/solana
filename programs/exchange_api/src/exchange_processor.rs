@@ -315,7 +315,7 @@ impl ExchangeProcessor {
         )
     }
 
-    fn do_trade_cancellation(keyed_accounts: &mut [KeyedAccount]) -> Result<(), InstructionError> {
+    fn do_order_cancellation(keyed_accounts: &mut [KeyedAccount]) -> Result<(), InstructionError> {
         const OWNER_INDEX: usize = 0;
         const TRADE_INDEX: usize = 1;
 
@@ -446,11 +446,11 @@ pub fn process_instruction(
         ExchangeInstruction::TransferRequest(token, tokens) => {
             ExchangeProcessor::do_transfer_request(keyed_accounts, token, tokens)
         }
-        ExchangeInstruction::TradeRequest(info) => {
+        ExchangeInstruction::OrderRequest(info) => {
             ExchangeProcessor::do_trade_request(keyed_accounts, &info)
         }
-        ExchangeInstruction::TradeCancellation => {
-            ExchangeProcessor::do_trade_cancellation(keyed_accounts)
+        ExchangeInstruction::OrderCancellation => {
+            ExchangeProcessor::do_order_cancellation(keyed_accounts)
         }
         ExchangeInstruction::SwapRequest => ExchangeProcessor::do_swap_request(keyed_accounts),
     }
