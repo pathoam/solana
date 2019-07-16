@@ -1,5 +1,5 @@
 //! Spv proof Verification Program
-
+use crate::id;
 use serde_derive::{Deserialize, Serialize};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::instruction::{AccountMeta, Instruction};
@@ -61,6 +61,8 @@ pub struct ClientRequestInfo {
     pub confirmations: u8;
     // fee paid for tx verification
     pub fee:           u64;
+    // required minimum difficulty for submitted blocks
+    pub difficulty:    Option<u64>;
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -110,4 +112,37 @@ pub enum SpvInstruction {
     CancelRequest(BitcoinTxHash);
     // used to submit a proof matching a posted BitcoinTxHash or for own benefit
     SubmitProof(ProofSubmitInfo);
+}
+
+
+pub fn client_request(
+    owner         : &Pubkey,
+    txHash        : BitcoinTxHash,
+    fee           : u64,
+    confirmations : u8,
+    difficulty    : u64,
+) -> Instruction {
+    let account_meta = vec![AccountMeta::new(*owner, true)];
+    Instruction::new(
+        id(),
+        &SpvInstruction::ClientRequest(ClientRequestInfo{
+            txHash,
+            confirmations,
+            fee,
+            difficulty,
+        }),
+        account_meta,
+    )
+}
+
+pub fn cancel_request(
+    owner   : &Pubkey,
+    txHash  : BitcoinTxHash,
+) -> Instruction {
+    let account_meta = vec![AccountMeta::new(*owner, true)];
+    Instruction::new(
+        id(),
+        &SpvInstruction::CancelRequest(BitcoinTxHash),
+        account_meta,
+    )
 }
