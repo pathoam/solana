@@ -4,6 +4,17 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::instruction::{AccountMeta, Instruction};
 
 
+pub enum SpvError {
+    // Malformed or otherwise invalid proofrequest
+    InvalidRequest(String),
+    // Malformed bitcoin block header
+    InvalidHeader(String),
+    // Referenced header store DNE or not applicable
+    InvalidHeaderStore(String),
+    //merkle proof is malformed or incorrect
+    InvalidProof(String),
+}
+
 pub type BitcoinTxHash = [u8;32];
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -50,7 +61,7 @@ impl BlockHeader {
 
     pub fn difficulty(mut self) -> u32 {
         // calculates difficulty from nbits
-        
+
     }
 }
 
