@@ -133,9 +133,11 @@ pub fn process_instruction(
 mod test {
     use super::*;
     use crate::{spv_instruction, id};
+    use solana_sdk::system_instruction;
 
-    fn try_submit_request(
-        txHash: BitcoinTxHash,
-
-    )
+    fn try_parse_header(
+        header_bytes: [u8],
+    ) -> Result<(), SpvError> {
+        
+    }
 }
